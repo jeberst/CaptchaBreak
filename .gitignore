@@ -36,5 +36,6 @@
 ehthumbs.db
 Thumbs.db
 
-bin/**
-obj/**
+[Bb]in/
+[Oo]bj/
+[Pp]ackages/

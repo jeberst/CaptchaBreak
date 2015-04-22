@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Speech.Recognition;
 using System.Net;
 using System.IO;
+using NAudio.Wave;
+using NAudio.Dsp;
 
 namespace SpeechRecognition
 {
@@ -13,17 +15,38 @@ namespace SpeechRecognition
     {
         static void Main(string[] args)
         {
-            Google();
-            //MicrosoftSpeech();
+            //Google();
+            MicrosoftSpeech();
 
         }
 
         private static void MicrosoftSpeech()
         {
+            string originalPath = "C:\\12108.wav";
+            string filteredPath = "C:\\Users\\Guillermo Gomez\\Desktop\\12108nr.wav";
+
+            using (WaveFileReader reader = new WaveFileReader(originalPath)) 
+            {
+                ISampleProvider provider = reader.ToSampleProvider();
+                ISampleProvider filteredProvider = new FilteredWave(provider);
+
+                Console.WriteLine(reader.WaveFormat.SampleRate + " " + reader.WaveFormat.BitsPerSample + " " + reader.WaveFormat.Channels);
+
+                using (WaveFileWriter writer = new WaveFileWriter(filteredPath, filteredProvider.WaveFormat))
+                {
+                    float[] buffer = new float[44100];
+                    int read = 0;
+                    while ((read = filteredProvider.Read(buffer, 0, 44100)) != 0)
+                    {
+                        writer.WriteSamples(buffer, 0, read);
+                    }
+                }
+            }
+
             SpeechRecognitionEngine engine = new SpeechRecognitionEngine();
 
-            //engine.SetInputToWaveFile("C:\\12108.wav");
-            engine.SetInputToDefaultAudioDevice();
+            engine.SetInputToWaveFile(filteredPath);
+            // engine.SetInputToDefaultAudioDevice();
 
             Choices choices = new Choices();
             choices.Add("1", "2", "3", "4", "5", "6", "7", "8", "9", "0");
