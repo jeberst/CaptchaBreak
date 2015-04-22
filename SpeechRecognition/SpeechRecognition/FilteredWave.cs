@@ -18,7 +18,7 @@ namespace SpeechRecognition
         {
             this.inProvider = inProvider;
 
-            this.filter = BiQuadFilter.LowPassFilter(44100, 5500, 1);
+            this.filter = BiQuadFilter.LowPassFilter(44100, 6000, 1);
         }
 
         public int Read(float[] buffer, int offset, int count)

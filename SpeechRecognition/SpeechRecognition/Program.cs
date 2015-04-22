@@ -13,24 +13,34 @@ namespace SpeechRecognition
 {
     class Program
     {
+        private const string wavFilePath = @"C:\Projects\MS Project\Samples\wavAudioCaptchas";
+
+        private const string filteredFilePath = @"C:\Projects\MS Project\Samples\filteredAudioCaptchas";
+
         static void Main(string[] args)
         {
             //Google();
-            MicrosoftSpeech();
-
+            NoiseReduceFiles();
+            //MicrosoftSpeech();
         }
 
-        private static void MicrosoftSpeech()
+        private static void NoiseReduceFiles()
         {
-            string originalPath = "C:\\12108.wav";
-            string filteredPath = "C:\\Users\\Guillermo Gomez\\Desktop\\12108nr.wav";
+            foreach (string originalPath in Directory.EnumerateFiles(wavFilePath))
+            {
+                string filename = Path.GetFileName(originalPath);
+                string filteredPath = Path.Combine(filteredFilePath, filename);
 
-            using (WaveFileReader reader = new WaveFileReader(originalPath)) 
+                NoiseReduceFile(originalPath, filteredPath);
+            }
+        }
+
+        private static void NoiseReduceFile(string originalPath, string filteredPath)
+        {
+            using (WaveFileReader reader = new WaveFileReader(originalPath))
             {
                 ISampleProvider provider = reader.ToSampleProvider();
                 ISampleProvider filteredProvider = new FilteredWave(provider);
-
-                Console.WriteLine(reader.WaveFormat.SampleRate + " " + reader.WaveFormat.BitsPerSample + " " + reader.WaveFormat.Channels);
 
                 using (WaveFileWriter writer = new WaveFileWriter(filteredPath, filteredProvider.WaveFormat))
                 {
@@ -42,10 +52,13 @@ namespace SpeechRecognition
                     }
                 }
             }
+        }
 
+        private static void MicrosoftSpeech()
+        {
             SpeechRecognitionEngine engine = new SpeechRecognitionEngine();
 
-            engine.SetInputToWaveFile(filteredPath);
+            engine.SetInputToWaveFile(Path.Combine(filteredFilePath, "25366.wav"));
             // engine.SetInputToDefaultAudioDevice();
 
             Choices choices = new Choices();
