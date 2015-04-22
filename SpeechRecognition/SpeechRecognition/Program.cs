@@ -8,6 +8,7 @@ using System.Net;
 using System.IO;
 using NAudio.Wave;
 using NAudio.Dsp;
+using System.Threading;
 
 namespace SpeechRecognition
 {
@@ -20,8 +21,8 @@ namespace SpeechRecognition
         static void Main(string[] args)
         {
             //Google();
-            NoiseReduceFiles();
-            //MicrosoftSpeech();
+            //NoiseReduceFiles();
+            MicrosoftSpeech();
         }
 
         private static void NoiseReduceFiles()
@@ -56,24 +57,11 @@ namespace SpeechRecognition
 
         private static void MicrosoftSpeech()
         {
-            SpeechRecognitionEngine engine = new SpeechRecognitionEngine();
+            Microsoft m = new Microsoft();
 
-            engine.SetInputToWaveFile(Path.Combine(filteredFilePath, "25366.wav"));
-            // engine.SetInputToDefaultAudioDevice();
+            string result = m.Estimate(Path.Combine(filteredFilePath, "25366.wav"));
 
-            Choices choices = new Choices();
-            choices.Add("1", "2", "3", "4", "5", "6", "7", "8", "9", "0");
-
-            GrammarBuilder grammarBuilder = new GrammarBuilder();
-            grammarBuilder.Append(choices);
-
-            Grammar g = new Grammar(grammarBuilder);
-            engine.LoadGrammar(g);
-
-            engine.SpeechRecognized += (sender, evnt) => Console.WriteLine(evnt.Result.Text);
-            engine.SpeechRecognitionRejected += (sender, evnt) => Console.WriteLine("Nope!" + string.Join(",", evnt.Result.Alternates.Select(x => x.Text)));
-
-            engine.RecognizeAsync(RecognizeMode.Multiple);
+            Console.WriteLine(result);
 
             Console.ReadLine();
         }
