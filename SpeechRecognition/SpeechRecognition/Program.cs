@@ -16,8 +16,13 @@ namespace SpeechRecognition
 {
     class Program
     {
+        private const string wavFilePath = @"C:\Projects\MS Project\Samples\wavAudioCaptchas";
+
+        private const string filteredFilePath = @"C:\Projects\MS Project\Samples\filteredAudioCaptchas";
+
         static void Main(string[] args)
         {
+<<<<<<< HEAD
             string filename = "G:\\CaptchaBreak\\Samples\\wavAudioCaptchas\\test.wav";
 
             string filtername = "22.wav";
@@ -31,10 +36,48 @@ namespace SpeechRecognition
         private static void MicrosoftSpeech(string filename, string filtername)
         {
             string filteredPath = filterSound(filename, filtername);
+=======
+            //Google();
+            NoiseReduceFiles();
+            //MicrosoftSpeech();
+        }
 
+        private static void NoiseReduceFiles()
+        {
+            foreach (string originalPath in Directory.EnumerateFiles(wavFilePath))
+            {
+                string filename = Path.GetFileName(originalPath);
+                string filteredPath = Path.Combine(filteredFilePath, filename);
+
+                NoiseReduceFile(originalPath, filteredPath);
+            }
+        }
+
+        private static void NoiseReduceFile(string originalPath, string filteredPath)
+        {
+            using (WaveFileReader reader = new WaveFileReader(originalPath))
+            {
+                ISampleProvider provider = reader.ToSampleProvider();
+                ISampleProvider filteredProvider = new FilteredWave(provider);
+
+                using (WaveFileWriter writer = new WaveFileWriter(filteredPath, filteredProvider.WaveFormat))
+                {
+                    float[] buffer = new float[44100];
+                    int read = 0;
+                    while ((read = filteredProvider.Read(buffer, 0, 44100)) != 0)
+                    {
+                        writer.WriteSamples(buffer, 0, read);
+                    }
+                }
+            }
+        }
+>>>>>>> origin/master
+
+        private static void MicrosoftSpeech()
+        {
             SpeechRecognitionEngine engine = new SpeechRecognitionEngine();
 
-            engine.SetInputToWaveFile(filteredPath);
+            engine.SetInputToWaveFile(Path.Combine(filteredFilePath, "25366.wav"));
             // engine.SetInputToDefaultAudioDevice();
 
             Choices choices = new Choices();
