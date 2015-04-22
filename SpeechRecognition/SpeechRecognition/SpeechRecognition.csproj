@@ -73,6 +73,20 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CloudSpeech\CloudSpeech.csproj">
+      <Project>{8a009407-c2d0-4905-9b72-b60bab92dada}</Project>
+      <Name>CloudSpeech</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CUETools.Codecs.FLAKE\CUETools.Codecs.FLAKE.csproj">
+      <Project>{082d6b9e-326e-4d15-9798-edae9ede70a6}</Project>
+      <Name>CUETools.Codecs.FLAKE</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CUETools.Codecs\CUETools.Codecs.csproj">
+      <Project>{6458a13a-30ef-45a9-9d58-e5031b17bee2}</Project>
+      <Name>CUETools.Codecs</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

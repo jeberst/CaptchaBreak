@@ -8,6 +8,9 @@ using System.Net;
 using System.IO;
 using NAudio.Wave;
 using NAudio.Dsp;
+using CUETools.Codecs;
+using CUETools.Codecs.FLAKE;
+using CloudSpeech;
 
 namespace SpeechRecognition
 {
@@ -15,33 +18,19 @@ namespace SpeechRecognition
     {
         static void Main(string[] args)
         {
-            //Google();
-            MicrosoftSpeech();
+            string filename = "G:\\CaptchaBreak\\Samples\\wavAudioCaptchas\\test.wav";
+
+            string filtername = "22.wav";
+
+            //Google(filename);
+            GoogleCloud(filename);
+            //MicrosoftSpeech(filename, filtername);
 
         }
 
-        private static void MicrosoftSpeech()
+        private static void MicrosoftSpeech(string filename, string filtername)
         {
-            string originalPath = "C:\\12108.wav";
-            string filteredPath = "C:\\Users\\Guillermo Gomez\\Desktop\\12108nr.wav";
-
-            using (WaveFileReader reader = new WaveFileReader(originalPath)) 
-            {
-                ISampleProvider provider = reader.ToSampleProvider();
-                ISampleProvider filteredProvider = new FilteredWave(provider);
-
-                Console.WriteLine(reader.WaveFormat.SampleRate + " " + reader.WaveFormat.BitsPerSample + " " + reader.WaveFormat.Channels);
-
-                using (WaveFileWriter writer = new WaveFileWriter(filteredPath, filteredProvider.WaveFormat))
-                {
-                    float[] buffer = new float[44100];
-                    int read = 0;
-                    while ((read = filteredProvider.Read(buffer, 0, 44100)) != 0)
-                    {
-                        writer.WriteSamples(buffer, 0, read);
-                    }
-                }
-            }
+            string filteredPath = filterSound(filename, filtername);
 
             SpeechRecognitionEngine engine = new SpeechRecognitionEngine();
 
@@ -65,12 +54,38 @@ namespace SpeechRecognition
             Console.ReadLine();
         }
 
-        private static void Google()
+        private static string filterSound(string filename, string filtername)
+        {
+            string originalPath = filename;
+            string filteredPath = "G:\\CaptchaBreak\\Samples\\filteredAudioCaptchas\\" + filtername;
+
+            using (WaveFileReader reader = new WaveFileReader(originalPath))
+            {
+                ISampleProvider provider = reader.ToSampleProvider();
+                ISampleProvider filteredProvider = new FilteredWave(provider);
+
+                Console.WriteLine(reader.WaveFormat.SampleRate + " " + reader.WaveFormat.BitsPerSample + " " + reader.WaveFormat.Channels);
+
+                using (WaveFileWriter writer = new WaveFileWriter(filteredPath, filteredProvider.WaveFormat))
+                {
+                    float[] buffer = new float[44100];
+                    int read = 0;
+                    while ((read = filteredProvider.Read(buffer, 0, 44100)) != 0)
+                    {
+                        writer.WriteSamples(buffer, 0, read);
+                    }
+                }
+            }
+            return filteredPath;
+        }
+
+        private static void Google(string filename)
         {
             try
             {
 
-                FileStream fileStream = File.OpenRead("good-morning-google.flac");
+
+                FileStream fileStream = File.OpenRead(filename);
                 MemoryStream memoryStream = new MemoryStream();
                 memoryStream.SetLength(fileStream.Length);
                 fileStream.Read(memoryStream.GetBuffer(), 0, (int)fileStream.Length);
@@ -84,15 +99,19 @@ namespace SpeechRecognition
                 _HWR_SpeechToText.ContentType = "audio/x-flac; rate=44100";
                 _HWR_SpeechToText.ContentLength = BA_AudioFile.Length;
                 Stream stream = _HWR_SpeechToText.GetRequestStream();
-                stream.Write(BA_AudioFile, 0, BA_AudioFile.Length);
-                stream.Close();
+                ConvertToFlac(memoryStream, stream);
+                //stream.Write(BA_AudioFile, 0, BA_AudioFile.Length);
 
                 HttpWebResponse HWR_Response = (HttpWebResponse)_HWR_SpeechToText.GetResponse();
-                if (HWR_Response.StatusCode == HttpStatusCode.OK)
-                {
-                    StreamReader SR_Response = new StreamReader(HWR_Response.GetResponseStream());
-                    Console.WriteLine(SR_Response.ReadToEnd());
-                }
+              
+                    if (HWR_Response.StatusCode == HttpStatusCode.OK)
+                    {
+                        StreamReader SR_Response = new StreamReader(HWR_Response.GetResponseStream());
+                        Console.WriteLine(SR_Response.ReadToEnd());
+                    }
+                    HWR_Response.Close();
+           
+                
             }
             catch (Exception ex)
             {
@@ -101,5 +120,42 @@ namespace SpeechRecognition
 
             Console.ReadLine();
         }
+
+        private static void GoogleCloud(string filename)
+        {
+            var SpeechToText = new SpeechToText();
+
+            using (var stream = new FileStream(filename, FileMode.Open))
+            {
+                var response = SpeechToText.Recognize(stream);
+            }
+
+        }
+
+      private static void ConvertToFlac(Stream sourceStream, Stream destinationStream)
+        {
+            var audioSource = new WAVReader(null, sourceStream);
+            try
+            {
+                if (audioSource.PCM.SampleRate != 16000)
+                {
+                    throw new InvalidOperationException("Incorrect frequency - WAV file must be at 16 KHz.");
+                }
+                var buff = new AudioBuffer(audioSource, 0x10000);
+                var flakeWriter = new FlakeWriter(null, destinationStream, audioSource.PCM);
+                flakeWriter.CompressionLevel = 8;
+                while (audioSource.Read(buff, -1) != 0)
+                {
+                    flakeWriter.Write(buff);
+                }
+                flakeWriter.Close();
+            }
+            finally
+            {
+                audioSource.Close();
+            }
+        }
     }
+
+    
 }
