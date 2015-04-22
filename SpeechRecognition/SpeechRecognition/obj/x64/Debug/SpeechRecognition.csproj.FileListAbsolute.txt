@@ -1,6 +1,0 @@
-G:\CaptchaBreak\CaptchaBreak\SpeechRecognition\SpeechRecognition\bin\x64\Debug\SpeechRecognition.exe.config
-G:\CaptchaBreak\CaptchaBreak\SpeechRecognition\SpeechRecognition\bin\x64\Debug\SpeechRecognition.exe
-G:\CaptchaBreak\CaptchaBreak\SpeechRecognition\SpeechRecognition\bin\x64\Debug\SpeechRecognition.pdb
-G:\CaptchaBreak\CaptchaBreak\SpeechRecognition\SpeechRecognition\obj\x64\Debug\SpeechRecognition.csprojResolveAssemblyReference.cache
-G:\CaptchaBreak\CaptchaBreak\SpeechRecognition\SpeechRecognition\obj\x64\Debug\SpeechRecognition.exe
-G:\CaptchaBreak\CaptchaBreak\SpeechRecognition\SpeechRecognition\obj\x64\Debug\SpeechRecognition.pdb
