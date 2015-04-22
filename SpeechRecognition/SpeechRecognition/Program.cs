@@ -22,7 +22,6 @@ namespace SpeechRecognition
 
         static void Main(string[] args)
         {
-<<<<<<< HEAD
             string filename = "G:\\CaptchaBreak\\Samples\\wavAudioCaptchas\\test.wav";
 
             string filtername = "22.wav";
@@ -36,7 +35,6 @@ namespace SpeechRecognition
         private static void MicrosoftSpeech(string filename, string filtername)
         {
             string filteredPath = filterSound(filename, filtername);
-=======
             //Google();
             NoiseReduceFiles();
             //MicrosoftSpeech();
@@ -71,7 +69,6 @@ namespace SpeechRecognition
                 }
             }
         }
->>>>>>> origin/master
 
         private static void MicrosoftSpeech()
         {
