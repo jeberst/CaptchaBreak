@@ -26,7 +26,6 @@ namespace SpeechRecognition
             engine.LoadGrammar(g);
 
             string result = "";
-            engine.SpeechDetected += (sender, evnt) => result = result + "x";
             engine.SpeechRecognized += (sender, evnt) => result = result + evnt.Result.Text;
             engine.SpeechRecognitionRejected += (sender, evnt) => result = result + ReplaceIfClear(evnt.Result.Alternates.Select(x => x.Text).FirstOrDefault(), "-");
 

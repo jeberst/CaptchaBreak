@@ -40,9 +40,10 @@ namespace SpeechRecognition
         private static void MicrosoftSpeech(string filename, string filtername)
         {
             string filteredPath = filterSound(filename, filtername);
-            //Google();
-            //NoiseReduceFiles();
-            MicrosoftSpeech();
+
+            Microsoft m = new Microsoft();
+
+            string result = m.Estimate(filteredPath);
         }
 
         private static void NoiseReduceFiles()
