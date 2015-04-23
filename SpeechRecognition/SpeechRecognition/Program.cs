@@ -11,6 +11,8 @@ using NAudio.Dsp;
 using CUETools.Codecs;
 using CUETools.Codecs.FLAKE;
 using CloudSpeech;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 
 namespace SpeechRecognition
 {
@@ -22,13 +24,15 @@ namespace SpeechRecognition
 
         static void Main(string[] args)
         {
-            string filename = "G:\\CaptchaBreak\\Samples\\wavAudioCaptchas\\test.wav";
+            string filename = "G:\\CaptchaBreak\\Samples\\wavAudioCaptchas\\12108.wav";
 
             string filtername = "22.wav";
 
             //Google(filename);
-            GoogleCloud(filename);
+            //GoogleCloud(filename);
             //MicrosoftSpeech(filename, filtername);
+            Apple(filename);
+            //AppleFail2(filename);
 
         }
 
@@ -70,11 +74,34 @@ namespace SpeechRecognition
             }
         }
 
+
+        private static void StereoToMono(string filename)
+        {
+
+            using (WaveFileReader reader = new WaveFileReader(filename))
+            {
+                StereoToMonoProvider16 sound = new StereoToMonoProvider16(reader);
+                using (WaveFileWriter writer = new WaveFileWriter(filename.Replace(".wav", "mono.wav"), sound.WaveFormat))
+                {
+                    byte[] buffer = new byte[16000];
+                    int read = 0;
+                     object o = new object();
+                    while ((read = sound.Read(buffer, 0, 16000)) != 0)
+                    {
+                        //writer.Write(buffer, 0, read);
+                        //writer.WriteSamples(buffer, 0, read);
+                    }
+                }
+
+            }
+
+        }
+
         private static void MicrosoftSpeech()
         {
             SpeechRecognitionEngine engine = new SpeechRecognitionEngine();
 
-            engine.SetInputToWaveFile(Path.Combine(filteredFilePath, "25366.wav"));
+            engine.SetInputToWaveFile(Path.Combine(filteredFilePath, "12108.wav"));
             // engine.SetInputToDefaultAudioDevice();
 
             Choices choices = new Choices();
@@ -161,6 +188,52 @@ namespace SpeechRecognition
             Console.ReadLine();
         }
 
+        private static void Apple(string filename)
+        {
+            try
+            {
+                StereoToMono(filename);
+                FileStream fileStream = File.OpenRead(filename.Replace(".wav", "mono.wav"));
+                MemoryStream memoryStream = new MemoryStream();
+                memoryStream.SetLength(fileStream.Length);
+                fileStream.Read(memoryStream.GetBuffer(), 0, (int)fileStream.Length);
+                byte[] BA_AudioFile = memoryStream.GetBuffer();
+                HttpWebRequest _HWR_SpeechToText = null;
+                _HWR_SpeechToText =
+                            (HttpWebRequest)HttpWebRequest.Create(
+                                "https://dictation.nuancemobility.net/NMDPAsrCmdServlet/dictation?appId=NMDPTRIAL_j_eberst_knights_ucf_edu20150421210830&appKey=35ba89c3c244e1d1b438654c5f0121e4818267620c8ca34fb67fc55eaad98adf9314a2565884270cbc8c591b8d7aff0ffc667108f31457a9941d073ef6921d89");
+                ServicePointManager.ServerCertificateValidationCallback += new System.Net.Security.RemoteCertificateValidationCallback(ValidateServerCertificate);
+                _HWR_SpeechToText.ProtocolVersion = HttpVersion.Version11;
+                _HWR_SpeechToText.Method = "POST";
+                _HWR_SpeechToText.ContentType = "audio/x-wav;codec=pcm;bit=16;rate=16000 ";
+                _HWR_SpeechToText.Accept = "text/plain";
+                _HWR_SpeechToText.Headers.Add("Accept-Topic:Dictation");
+                _HWR_SpeechToText.Headers.Add("Accept-Language:en-US");
+                _HWR_SpeechToText.SendChunked = true;
+                _HWR_SpeechToText.ContentLength = BA_AudioFile.Length;
+                Stream stream = _HWR_SpeechToText.GetRequestStream();
+                stream.Write(BA_AudioFile, 0, BA_AudioFile.Length);
+                //stream.Close();
+
+                HttpWebResponse HWR_Response = (HttpWebResponse)_HWR_SpeechToText.GetResponse();
+                if (HWR_Response.StatusCode == HttpStatusCode.OK)
+                {
+                    StreamReader SR_Response = new StreamReader(HWR_Response.GetResponseStream());
+                    Console.WriteLine(SR_Response.ReadToEnd());
+                }
+                else
+                {
+                    HWR_Response.GetResponseHeader("x-nuance-sessionid");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+
+            Console.ReadLine();
+        }
+
         private static void GoogleCloud(string filename)
         {
             var SpeechToText = new SpeechToText();
@@ -170,6 +243,12 @@ namespace SpeechRecognition
                 var response = SpeechToText.Recognize(stream);
             }
 
+        }
+
+        //for testing purpose only, accept any dodgy certificate... 
+        public static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            return true;
         }
 
       private static void ConvertToFlac(Stream sourceStream, Stream destinationStream)
