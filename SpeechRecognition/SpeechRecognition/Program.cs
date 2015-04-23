@@ -59,9 +59,13 @@ namespace SpeechRecognition
         {
             Microsoft m = new Microsoft();
 
-            string result = m.Estimate(Path.Combine(filteredFilePath, "25366.wav"));
+            foreach (string file in Directory.EnumerateFiles(filteredFilePath)) 
+            {
+                string actual = Path.GetFileNameWithoutExtension(file);
+                string result = m.Estimate(Path.Combine(filteredFilePath, file));
 
-            Console.WriteLine(result);
+                Console.WriteLine(actual + " - " + result);
+            }
 
             Console.ReadLine();
         }
