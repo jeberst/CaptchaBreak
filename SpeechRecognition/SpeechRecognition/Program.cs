@@ -14,6 +14,7 @@ using CUETools.Codecs;
 using CUETools.Codecs.FLAKE;
 using NAudio.Dsp;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace SpeechRecognition
 {
@@ -27,23 +28,40 @@ namespace SpeechRecognition
         {
             string filename = "G:\\CaptchaBreak\\Samples\\wavAudioCaptchas\\12108.wav";
 
+            string captcha = filename.Substring(filename.Length - 9, 5);
+            //string captcha = "12108";
+
             string filtername = "22.wav";
 
+            List<string> googleResults = new List<string>();
+            googleResults.Add("1 q 10 812");
+            googleResults.Add("1 q 10 813");
+            googleResults.Add("1 Q 10 812");
+            googleResults.Add("1 q 10 814");
+            googleResults.Add("1210 812");
+            googleResults.Add("1 q 10 a1c");
+
+
             //Google(filename);
-            //GoogleCloud(filename);
-            //MicrosoftSpeech(filename, filtername);
-            Apple(filename);
-            //AppleFail2(filename);
+            //List<string> googleResults = GoogleCloud(filename);
+            List<string> microsoftResults = MicrosoftSpeech(filename, filtername);
+            List<string> appleResults = Apple(filename);
+
+            AnalyzeStrings(googleResults, appleResults, microsoftResults, captcha);
 
         }
 
-        private static void MicrosoftSpeech(string filename, string filtername)
+        private static List<string> MicrosoftSpeech(string filename, string filtername)
         {
             string filteredPath = filterSound(filename, filtername);
+            List<string> microsoftResults = new List<string>();
 
             Microsoft m = new Microsoft();
 
             string result = m.Estimate(filteredPath);
+            microsoftResults.Add(result);
+
+            return microsoftResults;
         }
 
         private static void NoiseReduceFiles()
@@ -85,11 +103,13 @@ namespace SpeechRecognition
                 StereoToMonoProvider16 sound = new StereoToMonoProvider16(reader);
                 sound.LeftVolume = 1;
                 ISampleProvider provider = sound.ToSampleProvider();
+
+                var resampler = new WdlResamplingSampleProvider(provider, 16000);
                 using (WaveFileWriter writer = new WaveFileWriter(filename.Replace(".wav", "mono.wav"), sound.WaveFormat))
                 {
-                    float[] buffer = new float[44100];
+                    float[] buffer = new float[16000];
                     int read = 0;
-                    while ((read = provider.Read(buffer, 0, 44100)) != 0)
+                    while ((read = resampler.Read(buffer, 0, 16000)) != 0)
                     {
                         //writer.Write(buffer, 0, read);
                         writer.WriteSamples(buffer, 0, read);
@@ -182,10 +202,12 @@ namespace SpeechRecognition
             Console.ReadLine();
         }
 
-        private static void Apple(string filename)
+        private static List<string> Apple(string filename)
         {
             try
             {
+                List<string> appleResponses = new List<string>();
+
                 StereoToMono(filename);
                 FileStream fileStream = File.OpenRead(filename.Replace(".wav", "mono.wav"));
                 MemoryStream memoryStream = new MemoryStream();
@@ -213,39 +235,55 @@ namespace SpeechRecognition
                 if (HWR_Response.StatusCode == HttpStatusCode.OK)
                 {
                     StreamReader SR_Response = new StreamReader(HWR_Response.GetResponseStream());
+                    Char[] read = new Char[256];
+                    int count = SR_Response.Read(read, 0, 256);
+                    while (count > 0)
+                    {
+                        // Dumps the 256 characters on a string and displays the string to the console.
+                        String responseString = new String(read, 0, count);
+                        var list = responseString.Split('\n');
+                        appleResponses = list.ToList<string>();
+                        count = SR_Response.Read(read, 0, 256);
+                    }
+
                     Console.WriteLine(SR_Response.ReadToEnd());
                 }
                 else
                 {
                     HWR_Response.GetResponseHeader("x-nuance-sessionid");
                 }
+
+                return appleResponses;
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
+                return null;
             }
 
             Console.ReadLine();
         }
 
-        private static void GoogleCloud(string filename)
+        private static List<string> GoogleCloud(string filename)
         {
             var SpeechToText = new SpeechToText();
+            List<string> googleResults = null;
 
             using (var stream = new FileStream(filename, FileMode.Open))
             {
-                var response = SpeechToText.Recognize(stream);
+                googleResults = SpeechToText.Recognize(stream);
+                var a = 1;
             }
+            return googleResults;
 
         }
-
-        //for testing purpose only, accept any dodgy certificate... 
+ 
         public static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             return true;
         }
 
-      private static void ConvertToFlac(Stream sourceStream, Stream destinationStream)
+        private static void ConvertToFlac(Stream sourceStream, Stream destinationStream)
         {
             var audioSource = new WAVReader(null, sourceStream);
             try
@@ -268,7 +306,88 @@ namespace SpeechRecognition
                 audioSource.Close();
             }
         }
+
+
+        private static void AnalyzeStrings(List<string> googleResults, List<string> appleResults, List<string>microsoftResults, string captcha)
+        {
+            bool correct = false;
+            bool correctComposite = false;
+            bool[] correctCompositeArray = new bool[5];
+
+            var googleAnalysis = Analyze(googleResults, captcha);
+            var microsoftAnalysis = Analyze(microsoftResults, captcha);
+            var appleAnalysis = Analyze(appleResults, captcha);
+
+            if(googleAnalysis.complete || microsoftAnalysis.complete || appleAnalysis.complete)
+            {
+                correct = true;
+            }
+
+            for(int i=0; i<captcha.Length; i++)
+            {
+                if(googleAnalysis.correctness[i] > 0 || microsoftAnalysis.correctness[i] > 0 || appleAnalysis.correctness[i] > 0)
+                {
+                    correctCompositeArray[i] = true;
+                }
+
+                if(correctCompositeArray.Contains(false) == false)
+                {
+                    correctComposite = true;
+                }
+            }
+
+        }
+
+        private static TestResult Analyze(List<string> appleResults, string captcha)
+        {
+            //Analyze Apple
+            TestResult Test = new TestResult();
+
+            int[] Correctness = new int[5];
+            bool Complete = false;
+
+            for (int i = 0; i < Correctness.Length; i++)
+            {
+                Correctness[i] = 0;
+            }
+
+            foreach (string transcript in appleResults)
+            {
+                if (!string.IsNullOrEmpty(transcript))
+                {
+                    string stripped = transcript.Replace(" ", "");
+                    string analyze = stripped.Substring(0, 5);
+
+                    if (string.Compare(analyze, captcha) == 0)
+                    {
+                        Complete = true;
+                    }
+
+                    int localCount = 0;
+                    for (int i = 0; i < analyze.Length; i++)
+                    {
+                        if (analyze[i] == captcha[i])
+                        {
+                            localCount++;
+                            Correctness[i]++;
+                        }
+                    }
+                }
+            }
+            Test.correctness = Correctness;
+            Test.complete = Complete;
+            return Test;
+
+        }
     }
+
+    class TestResult
+    {
+        public int[] correctness;
+        public bool complete = false;
+    }
+        
+
 
     
 }

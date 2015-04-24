@@ -11,6 +11,7 @@ using System.Text;
 using CUETools.Codecs;
 using CUETools.Codecs.FLAKE;
 using CloudSpeech.Response;
+using Newtonsoft.Json;
 
 namespace CloudSpeech
 {
@@ -28,8 +29,9 @@ namespace CloudSpeech
             this.endpointAddress = endpointAddress + "&lang=" + culture.Name;
         }
 
-        public IEnumerable<TextResponse> Recognize(Stream contentToRecognize)
+        public List<string> Recognize(Stream contentToRecognize)
         {
+            RootObject result = null;
             var request = (HttpWebRequest)WebRequest.Create(this.endpointAddress + "&maxresults=6&pfilter=2");
             ConfigureRequest(request);
             var requestStream = request.GetRequestStream();
@@ -54,13 +56,29 @@ namespace CloudSpeech
             if (HWR_Response.StatusCode == HttpStatusCode.OK)
             {
                 StreamReader SR_Response = new StreamReader(HWR_Response.GetResponseStream());
-                Console.WriteLine(SR_Response.ReadToEnd());
+                String responseString = null;
+
+                Char[] read = new Char[1024];
+                int count = SR_Response.Read(read, 0, 1024);
+                while (count > 0)
+                {
+                    // Dumps the 256 characters on a string and displays the string to the console.
+                    responseString = new String(read, 0, count);
+                    count = SR_Response.Read(read, 0, 1024);
+                }
+
+                result = JsonConvert.DeserializeObject<RootObject>(responseString);
             }
             HWR_Response.Close();
 
-
+            List<string> googleResults = new List<string>();
+            
+            foreach(var alternative in result.result.FirstOrDefault().alternative)
+            {
+                googleResults.Add(alternative.transcript.ToString());
+            }
             response.Close();
-            return speechResponses;
+            return googleResults;
         }
 
         private static void ConfigureRequest(HttpWebRequest request)
@@ -109,5 +127,24 @@ namespace CloudSpeech
             obj = (T)serializer.ReadObject(stream);
             return obj;
         }
+    }
+
+
+    public class Alternative
+    {
+        public string transcript { get; set; }
+        public double confidence { get; set; }
+    }
+
+    public class Result
+    {
+        public List<Alternative> alternative { get; set; }
+        public bool final { get; set; }
+    }
+
+    public class RootObject
+    {
+        public List<Result> result { get; set; }
+        public int result_index { get; set; }
     }
 }
