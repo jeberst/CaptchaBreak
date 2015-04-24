@@ -83,12 +83,13 @@ namespace SpeechRecognition
             using (WaveFileReader reader = new WaveFileReader(filename))
             {
                 StereoToMonoProvider16 sound = new StereoToMonoProvider16(reader);
+                sound.LeftVolume = 1;
                 ISampleProvider provider = sound.ToSampleProvider();
                 using (WaveFileWriter writer = new WaveFileWriter(filename.Replace(".wav", "mono.wav"), sound.WaveFormat))
                 {
-                    float[] buffer = new float[16000];
+                    float[] buffer = new float[44100];
                     int read = 0;
-                    while ((read = provider.Read(buffer, 0, 16000)) != 0)
+                    while ((read = provider.Read(buffer, 0, 44100)) != 0)
                     {
                         //writer.Write(buffer, 0, read);
                         writer.WriteSamples(buffer, 0, read);
