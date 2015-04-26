@@ -45,7 +45,7 @@ namespace SpeechRecognition
             //Google(filename);
             //List<string> googleResults = GoogleCloud(filename);
             List<string> microsoftResults = MicrosoftSpeech(filename, filtername);
-            List<string> appleResults = Apple(filename);
+            List<string> appleResults = Apple(filename, captcha);
 
             AnalyzeStrings(googleResults, appleResults, microsoftResults, captcha);
 
@@ -95,7 +95,7 @@ namespace SpeechRecognition
         }
 
 
-        private static void StereoToMono(string filename)
+        private static void StereoToMono(string filename, string outputPath)
         {
 
             using (WaveFileReader reader = new WaveFileReader(filename))
@@ -105,7 +105,9 @@ namespace SpeechRecognition
                 ISampleProvider provider = sound.ToSampleProvider();
 
                 var resampler = new WdlResamplingSampleProvider(provider, 16000);
-                using (WaveFileWriter writer = new WaveFileWriter(filename.Replace(".wav", "mono.wav"), sound.WaveFormat))
+
+
+                using (WaveFileWriter writer = new WaveFileWriter(outputPath, sound.WaveFormat))
                 {
                     float[] buffer = new float[16000];
                     int read = 0;
@@ -202,14 +204,14 @@ namespace SpeechRecognition
             Console.ReadLine();
         }
 
-        private static List<string> Apple(string filename)
+        private static List<string> Apple(string filename, string captcha)
         {
             try
             {
                 List<string> appleResponses = new List<string>();
-
-                StereoToMono(filename);
-                FileStream fileStream = File.OpenRead(filename.Replace(".wav", "mono.wav"));
+                string outputPath = "G:\\CaptchaBreak\\Samples\\MonoFiles\\" + captcha + "Mono.wav"; 
+                StereoToMono(filename, outputPath);
+                FileStream fileStream = File.OpenRead(outputPath);
                 MemoryStream memoryStream = new MemoryStream();
                 memoryStream.SetLength(fileStream.Length);
                 fileStream.Read(memoryStream.GetBuffer(), 0, (int)fileStream.Length);
@@ -311,34 +313,68 @@ namespace SpeechRecognition
         private static void AnalyzeStrings(List<string> googleResults, List<string> appleResults, List<string>microsoftResults, string captcha)
         {
             bool correct = false;
-            bool correctComposite = false;
+            TestResult composite = new TestResult();
+            int[] Correctness = new int[5];
+            composite.correctness = Correctness;
+
+
             bool[] correctCompositeArray = new bool[5];
 
-            var googleAnalysis = Analyze(googleResults, captcha);
-            var microsoftAnalysis = Analyze(microsoftResults, captcha);
-            var appleAnalysis = Analyze(appleResults, captcha);
-
-            if(googleAnalysis.complete || microsoftAnalysis.complete || appleAnalysis.complete)
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter("Results.txt", false))
             {
-                correct = true;
-            }
+                file.WriteLine("Google Results: " + captcha);
 
-            for(int i=0; i<captcha.Length; i++)
-            {
-                if(googleAnalysis.correctness[i] > 0 || microsoftAnalysis.correctness[i] > 0 || appleAnalysis.correctness[i] > 0)
+                var googleAnalysis = Analyze(googleResults, captcha);
+                file.WriteLine("Single Complete Solution: " + googleAnalysis.complete);
+                file.WriteLine("Correctness String: ");
+                PrintCorrectString(file, googleAnalysis);
+
+                file.WriteLine("Microsoft Results: " + captcha);
+                var microsoftAnalysis = Analyze(microsoftResults, captcha);
+                file.WriteLine("Single Complete Solution: " + microsoftAnalysis.complete);
+                PrintCorrectString(file, microsoftAnalysis);
+
+                file.WriteLine("Apple Results: " + captcha);
+                var appleAnalysis = Analyze(appleResults, captcha);
+                file.WriteLine("Single Complete Solution: " + appleAnalysis.complete);
+                PrintCorrectString(file, appleAnalysis);
+
+                if (googleAnalysis.complete || microsoftAnalysis.complete || appleAnalysis.complete)
                 {
-                    correctCompositeArray[i] = true;
+                    correct = true;
                 }
 
-                if(correctCompositeArray.Contains(false) == false)
+               
+                for (int i = 0; i < captcha.Length; i++)
                 {
-                    correctComposite = true;
+                    if (googleAnalysis.correctness[i] > 0 || microsoftAnalysis.correctness[i] > 0 || appleAnalysis.correctness[i] > 0)
+                    {
+                        correctCompositeArray[i] = true;
+                        composite.correctness[i] = 1;
+                    }
+
+                    if (correctCompositeArray.Contains(false) == false)
+                    {
+                        composite.complete = true;
+                    }
                 }
+
+                file.WriteLine("Composite Results: " + captcha);
+                file.WriteLine("Composite Complete Solution: " + composite.complete);
+                PrintCorrectString(file, composite);              
             }
 
         }
 
-        private static TestResult Analyze(List<string> appleResults, string captcha)
+        private static void PrintCorrectString(System.IO.StreamWriter file, TestResult result)
+        {
+            for (int i = 0; i < result.correctness.Length; i++)
+            {
+                file.WriteLine(i + " " + result.correctness[i].ToString());
+            }
+        }
+
+        private static TestResult Analyze(List<string> Results, string captcha)
         {
             //Analyze Apple
             TestResult Test = new TestResult();
@@ -351,7 +387,7 @@ namespace SpeechRecognition
                 Correctness[i] = 0;
             }
 
-            foreach (string transcript in appleResults)
+            foreach (string transcript in Results)
             {
                 if (!string.IsNullOrEmpty(transcript))
                 {
