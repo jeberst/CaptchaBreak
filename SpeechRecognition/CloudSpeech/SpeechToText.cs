@@ -19,8 +19,8 @@ namespace CloudSpeech
     {
         private string endpointAddress;
 
-        public SpeechToText()
-            : this("https://www.google.com/speech-api/v2/recognize?output=json&lang=en-us&key=AIzaSyC7gzoO7E-Gg6yDtn4lhg6wDvD-qQDMXaQ", CultureInfo.CurrentCulture)
+        public SpeechToText(string key)
+            : this("https://www.google.com/speech-api/v2/recognize?output=json&lang=en-us&key=" + key, CultureInfo.CurrentCulture)
         {
         }
 

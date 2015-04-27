@@ -26,28 +26,48 @@ namespace SpeechRecognition
 
         static void Main(string[] args)
         {
-            string filename = "G:\\CaptchaBreak\\Samples\\wavAudioCaptchas\\12108.wav";
-
-            string captcha = filename.Substring(filename.Length - 9, 5);
-            //string captcha = "12108";
-
-            string filtername = "22.wav";
-
-            List<string> googleResults = new List<string>();
-            googleResults.Add("1 q 10 812");
-            googleResults.Add("1 q 10 813");
-            googleResults.Add("1 Q 10 812");
-            googleResults.Add("1 q 10 814");
-            googleResults.Add("1210 812");
-            googleResults.Add("1 q 10 a1c");
 
 
-            //Google(filename);
-            //List<string> googleResults = GoogleCloud(filename);
-            List<string> microsoftResults = MicrosoftSpeech(filename, filtername);
-            List<string> appleResults = Apple(filename, captcha);
+            string foldername = "G:\\CaptchaBreak\\Samples\\wavAudioCaptchas\\";
+            
+            //Josh's Account
+            string key = "AIzaSyC7gzoO7E-Gg6yDtn4lhg6wDvD-qQDMXaQ";
 
-            AnalyzeStrings(googleResults, appleResults, microsoftResults, captcha);
+            //Kim's Account
+            //string key = "AIzaSyCiCvPNxEdOePIdJPA3yIDpzjPbBi1u65c";
+
+            foreach (string file in Directory.EnumerateFiles(foldername, "*.wav"))
+            {
+                if (!file.Contains("filtered"))
+                {
+                    //string filename = "G:\\CaptchaBreak\\Samples\\wavAudioCaptchas\\92790.wav";
+                    string filename = file;
+
+                    string captcha = filename.Substring(filename.Length - 9, 5);
+
+                    //string captcha = "12108";
+
+                    string filtername = captcha + "filtered.wav";
+
+                    //List<string> googleResults = new List<string>();
+                    //googleResults.Add("1 q 10 812");
+                    //googleResults.Add("1 q 10 813");
+                    //googleResults.Add("1 Q 10 812");
+                    //googleResults.Add("1 q 10 814");
+                    //googleResults.Add("1210 812");
+                    //googleResults.Add("1 q 10 a1c");
+
+
+                    //Google(filename);
+                    List<string> googleResults = GoogleCloud(filename, key);
+                    List<string> microsoftResults = MicrosoftSpeech(filename, filtername);
+                    List<string> appleResults = Apple(filename, captcha);
+
+                    AnalyzeStrings(googleResults, appleResults, microsoftResults, captcha);
+                }
+
+                Thread.Sleep(30000);
+            }
 
         }
 
@@ -100,23 +120,29 @@ namespace SpeechRecognition
 
             using (WaveFileReader reader = new WaveFileReader(filename))
             {
-                StereoToMonoProvider16 sound = new StereoToMonoProvider16(reader);
-                sound.LeftVolume = 1;
-                ISampleProvider provider = sound.ToSampleProvider();
+                //StereoToMonoProvider16 sound = new StereoToMonoProvider16(reader);
+                //sound.LeftVolume = 1;
+                //ISampleProvider provider = sound.ToSampleProvider();
 
-                var resampler = new WdlResamplingSampleProvider(provider, 16000);
+               // var resampler = new WdlResamplingSampleProvider(provider, 16000);
+                
 
+                 var newFormat = new WaveFormat(16000, 16, 1); 
+                //using (WaveFileWriter writer = new WaveFileWriter(outputPath, ))
+                //{
+                //    float[] buffer = new float[16000];
+                //    int read = 0;
+                //    while ((read = provider.Read(buffer, 0, 16000)) != 0)
+                //    {
+                //        //writer.Write(buffer, 0, read);
+                //        writer.WriteSamples(buffer, 0, read);
+                //    }
+                //}
 
-                using (WaveFileWriter writer = new WaveFileWriter(outputPath, sound.WaveFormat))
-                {
-                    float[] buffer = new float[16000];
-                    int read = 0;
-                    while ((read = resampler.Read(buffer, 0, 16000)) != 0)
-                    {
-                        //writer.Write(buffer, 0, read);
-                        writer.WriteSamples(buffer, 0, read);
-                    }
-                }
+                 using (var conversionStream = new WaveFormatConversionStream(newFormat, reader))
+                 {
+                     WaveFileWriter.CreateWaveFile(outputPath, conversionStream);
+                 } 
 
             }
 
@@ -176,7 +202,7 @@ namespace SpeechRecognition
                 HttpWebRequest _HWR_SpeechToText = null;
                 _HWR_SpeechToText =
                             (HttpWebRequest)HttpWebRequest.Create(
-                                "https://www.google.com/speech-api/v2/recognize?output=json&lang=en-us&key=AIzaSyC7gzoO7E-Gg6yDtn4lhg6wDvD-qQDMXaQ");
+                                "https://www.google.com/speech-api/v2/recognize?output=json&lang=en-us&key=");
                 _HWR_SpeechToText.Credentials = CredentialCache.DefaultCredentials;
                 _HWR_SpeechToText.Method = "POST";
                 _HWR_SpeechToText.ContentType = "audio/x-flac; rate=44100";
@@ -266,9 +292,9 @@ namespace SpeechRecognition
             Console.ReadLine();
         }
 
-        private static List<string> GoogleCloud(string filename)
+        private static List<string> GoogleCloud(string filename, string key)
         {
-            var SpeechToText = new SpeechToText();
+            var SpeechToText = new SpeechToText(key);
             List<string> googleResults = null;
 
             using (var stream = new FileStream(filename, FileMode.Open))
@@ -320,7 +346,7 @@ namespace SpeechRecognition
 
             bool[] correctCompositeArray = new bool[5];
 
-            using (System.IO.StreamWriter file = new System.IO.StreamWriter("Results.txt", false))
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter("Results.txt", true))
             {
                 file.WriteLine("Google Results: " + captcha);
 
@@ -392,7 +418,12 @@ namespace SpeechRecognition
                 if (!string.IsNullOrEmpty(transcript))
                 {
                     string stripped = transcript.Replace(" ", "");
-                    string analyze = stripped.Substring(0, 5);
+                    string analyze = stripped;
+                    
+                    if(stripped.Length >=5)
+                    {
+                        analyze = stripped.Substring(0, 5);
+                    }
 
                     if (string.Compare(analyze, captcha) == 0)
                     {
